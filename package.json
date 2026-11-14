@@ -1,0 +1,29 @@
+{
+	"name": "@local/dsh-grid-gui",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"description": "A grid of every Workspace and Session: squares coloured by status, emoji or picture icons per square, and one bar per Workspace in the sidebar.",
+	"exports": {
+		".": "./index.js",
+		"./client": "./client.js",
+		"./locale/*.json": "./locale/*.json",
+		"./icon": "./icon.svg"
+	},
+	"files": [
+		"index.js",
+		"client.js",
+		"cordis.patch.yml",
+		"locale/*.json",
+		"icon.svg"
+	],
+	"dsh": {
+		"bundle": {
+			"patch": "./cordis.patch.yml"
+		},
+		"client": {
+			"platform": "web",
+			"immediately": true
+		}
+	}
+}

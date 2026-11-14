@@ -1,0 +1,6 @@
+{
+	"meta": {
+		"title": "Grid GUI",
+		"description": "Turns the main area into a grid of Workspaces, each opening into a grid of its Sessions: seven status colours, an emoji or picture icon per square, and matching bars in the sidebar."
+	}
+}

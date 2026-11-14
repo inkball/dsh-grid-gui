@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-grid-gui
+      name: '@local/dsh-grid-gui'

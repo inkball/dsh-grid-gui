@@ -1,0 +1,139 @@
+# @local/dsh-grid-gui — 方格工作区
+
+把工作区的主视图从「一条条列表」换成一面灰色小方块矩阵：**一格一个工作区，点进去变成那一格的会话，再点一格就直接进会话**。形状取自 Yamaha Tenori-on 的灯阵——纯灰、无边框、方格、居中，靠中亮边暗的发光区分层次。
+
+主区（`main`）铺的是矩阵本身，侧栏（`sidebar.workspaces` 位）换成一行一个工作区的横条，两处永远指向同一组数据，随便点哪个都能进去。
+
+![一层：一格一个工作区](docs/board.png)
+
+![二层：一格一个会话，末尾是多出来的新建格](docs/board-sessions.png)
+
+## 两层
+
+| 层 | 内容 | 怎么进 |
+| --- | --- | --- |
+| 一层 | 每个工作区一格，格数 = 工作区数（+ 有散落会话时追加一格「未归类」） | 默认就在这层，点一格进二层 |
+| 二层 | 当前工作区里的每个会话一格，最后多一格描边「+」 | 点顶部面包屑、侧栏条、或会话头部的返回按钮回一层 |
+
+格子是正方形，边长由可视区反算：`min(可用宽 / 列数, 可用高 / 行数)`，上限 120px，下限 32px，间隙 4px，列数取 `ceil(sqrt(格数))`，所以格数决定行列：4 格排 2×2，9 格排 3×3，17 格排 5×4。整块永远居中，不会被拉成宽条或挤到一角。
+
+格数不是常量，全部跟着数据走：一层格数 = 工作区数（有不属于任何工作区的会话时再加一格「未归类」），二层格数 = 当前工作区的会话数 + 一格新建；侧栏条数 = 同一份 `blocks` 的长度，所以侧栏永远和一层一一对应。
+
+## 颜色即状态
+
+一层的每一格按**自己工作区里会话的状态构成**上色，只算运行 / 等待 / 完成三种，纯闲置的会话不参与——一个有 40 个闲置会话、1 个在跑的工作区是「在跑」，不是「75% 在睡觉」。
+
+七种组合，全部由三个基色 `color-mix(in oklab, …)` 现算：
+
+| 组合 | 样式类 |
+| --- | --- |
+| 仅运行 | `is-c-run` |
+| 仅等待 | `is-c-wait` |
+| 仅完成 | `is-c-done` |
+| 完成 + 运行 | `is-c-done-run` |
+| 运行 + 等待 | `is-c-run-wait` |
+| 完成 + 等待 | `is-c-done-wait` |
+| 三种都有 | `is-c-done-run-wait` |
+
+全闲置的工作区不加类，保持灰底。运行时额外挂 `is-c-live`，方块中央的字形会缓慢呼吸。
+
+二层的会话格是纯色：运行蓝（呼吸）、等待琥珀、完成绿、闲置灰。
+
+一个工作区的状态判定优先级固定为：**有任一会话在等你（`pendingInteraction`）→ 等待；否则有未读完成 → 完成；否则在跑 → 运行；都不是 → 闲置**。
+
+## 方块上的图案
+
+每个方块中央都有一枚图案，用来在不读标题的情况下认位置：
+
+- **默认**是标题的确定性指纹——FNV-1a 哈希 → 4×4 格点阵 → 五种画法之一。同一个标题永远画同一个记号，换个浏览器也不变。
+- **半透明常显**，不靠 hover 才出现；鼠标移上去会浮出提示卡显示完整标题与会话数。
+- **可以换**：右键任意方块 → 「换个图标」，弹出小面板，24 个 emoji 快选、上传一张图、恢复默认。
+
+上传的图片在浏览器里就地处理：cover 裁切 → 缩到 96×96 → Rec.709 转灰度（带范围拉伸，避免发白的图片糊成一片）→ WebP 0.85（不支持时退回 PNG）。实测一张原本 24546 字符的 PNG data URL，处理完约剩 3.4k 字符，**原图不会写入任何地方**。
+
+图标恒为灰度、透明度 0.55，靠 `mix-blend-mode: luminosity` 把明暗交给图案、颜色继续由方块提供——所以一个正在跑的工作区，图标会被染成蓝色；完成的是绿色；闲置的是灰色。hover 时透明度升到 0.825。
+
+## 侧栏
+
+侧栏 `sidebar.workspaces` 位放一排横条，一行一个工作区，复刻的是自带的 Turn navigator 形体：左边距 8px、条长 120px、高 4px、圆角 2px、行高 12px。静止时 `scaleX(0.6)`（视觉 72px），hover / 聚焦 / 当前 / 已进入时拉满到 120px——用 transform 而不是改宽度，所以伸长不触发重排。
+
+条内部按状态分段，各段 `flexGrow` 取该状态的会话数，所以整条长度代表会话总量，颜色配比代表状态构成。点条等于「进入这个工作区并回到一层」。侧栏折叠成窄轨时整块不渲染——重复自带的折叠按钮没有意义。
+
+## 数据从哪来
+
+浏览器半边注入 `slots`、`locale`、`layout`、`uiWorkspace`、`workspaces`、`contextMenus`，读写全部走宿主既有服务，不自己维护一份状态：
+
+- 工作区与会话列表：`useWorkspaces` / `useSessions`
+- 状态：`useSessionStatus`
+- 打开会话 `uiWorkspace.openSession`、新建 `openWorkspace`、归档 `archiveSession`、置顶 `pinSession`、换位 `workspaces.insertSessionBefore`、改名 `rename`、删除 `delete`
+
+会话格的筛选规则跟自带浏览器保持一致：子会话（`origin === "subagent"`）与空白占位不出现；不属于任何工作区的会话收进末尾的「未归类」块。
+
+`Ctrl + 拖动`方块可在本工作区内换位（`insertSessionBefore`）。
+
+## 图标存在哪
+
+图标的生命周期比页面长，还要跨浏览器跟着账号走，所以放在插件自己的存储域里，而不是页面内存或 localStorage。
+
+宿主半边注入 `storageDomain`、`webServer`、`connection`，开一个域 `dsh_grid_gui`，一张表 `icons`：
+
+- 键：`w:<workspaceId>` 或 `s:<sessionId>`，一张表同时服务两层方块
+- 值：`{ kind: "emoji" | "image", value, updatedAt }`
+- 落地：`~/.dsh/storages/dsh_grid_gui.json`
+
+两条路由：
+
+```
+GET /grid-gui/icons   -> { icons: { [key]: { kind, value } } }
+PUT /grid-gui/icons   <- { key, icon: { kind, value } | null }   // null = 恢复默认
+```
+
+两条都要过 `connection.requestRejection(req)` 这道信任闸，未签名请求直接 401；PUT 体上限 256 KiB，单值上限 128 KiB——够放一张 96px 图标，又堵死恶意客户端往存储里灌垃圾。
+
+`iconSchema` 是手写的 `{ parse, safeParse }` 两方法对象，没有引入 zod：插件对外的依赖为零，能直接 `link:` 进任何 profile。
+
+## 安装
+
+需要一份 DeepSeek Harness 的 web profile。插件是本地链接包，用 `plugin_manager` 装，不要手改 profile 文件：
+
+```
+install_bundle  target = <本仓库的绝对路径>
+```
+
+它会做三件事：往 profile 的 `package.json` 里加 `"@local/dsh-grid-gui": "link:…"`、把包加进 `bundles` 列表、跑 pnpm 更新 lockfile。装完 `cordis.patch.yml` 里的 `insert` 条目由包自带的 patch 注入：
+
+```yaml
+- insert:
+    - id: dsh-grid-gui
+      name: '@local/dsh-grid-gui'
+```
+
+**改名或改包名之后不能只 `mv` 目录**：链接依赖、`bundles` 条目、lockfile 里的 specifier 都指着旧名字，必须 `remove_bundle` 再 `install_bundle` 重建。
+
+装好之后如果页面没变化，对 `include:dsh-grid-gui` 这条 entry 关一次再开一次——`cordis_inspect` 里它的 Config 状态显示 `absent` 是 worker 缓存的已知现象，不代表没加载；用路由探针更可靠：
+
+```bash
+curl -s -H "cookie: <签名 cookie>" http://127.0.0.1:3080/grid-gui/icons
+# {"icons":{},"storage":true}
+```
+
+`storage: true` 说明存储域开成功；`false` 说明这次没拿到 `storageDomain` 服务，方块仍能正常显示，只是图标存不下来。
+
+## 文件
+
+| 文件 | 作用 |
+| --- | --- |
+| `index.js` | 宿主半边：存储域 + 两条图标路由 + 信任闸 |
+| `client.js` | 浏览器半边：两层矩阵、侧栏条、右键菜单、图标面板、全部 CSS |
+| `cordis.patch.yml` | 注入 `include:dsh-grid-gui` |
+| `locale/zh.json`、`locale/en.json` | 插件管理器里显示的标题与描述 |
+| `icon.svg` | 插件列表里的图标 |
+
+样式表以 `@local/dsh-grid-gui` 为 `data-plugin-css` 标识注入一次，语言包命名空间 `gridGui`，中英双语的文案都写在 `client.js` 顶部的 `zh` / `en` 对象里。
+
+## 已知取舍
+
+- **图标没有「保留原色」选项**。灰度 + luminosity 混合是本插件的主线（方块给色、图案给明暗），一旦允许保留原色，一个花花绿绿的图标会把状态色盖掉。适合的图是明暗对比强的剪影或线稿。
+- **一层没有「新建工作区」格子**。侧栏原来的列表被整块替换成横条，所以新建工作区的入口不在侧栏了，而在「新建会话」页工作区选择器菜单底部的「添加工作区…」；矩阵只管展示与进入。
+- **侧栏条与主区矩阵共享选中态**，进入某一层后刷新页面会回到一层（视图状态不落盘）。
+- 方块上限 120px：工作区只有一个会话时，它是一格 120px 的方块，不会膨胀成整页。

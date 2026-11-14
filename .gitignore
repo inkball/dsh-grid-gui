@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Harness runtime state
+*.log
+.dsh/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Probes and scratch
+probe-*
+.probe*
