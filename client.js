@@ -613,7 +613,11 @@ window.__ModuleLoader__.load({
 			if (live) parts.push("run");
 			if (waiting) parts.push("wait");
 			if (parts.length === 0) return "";
-			return " is-c-" + parts.join("-") + (live ? " is-c-live" : "") + " is-colored";
+			/* Two statuses side by side are drawn as a gradient, one status per
+			 * corner, so the square carries both colours instead of a blend
+			 * that would average them into something neither of them is. */
+			const pair = parts.length === 2 ? " is-c-pair" : "";
+			return " is-c-" + parts.join("-") + pair + (live ? " is-c-live" : "") + " is-colored";
 		}
 
 		/* ------------------------------------------------------------------ *
@@ -759,14 +763,12 @@ window.__ModuleLoader__.load({
 /* A Workspace square takes the colour of the statuses its own Sessions are
  * in. Only run / wait / done count, so a quiet Workspace stays grey however
  * many idle Sessions it holds. Seven combinations, all read off three pure
- * colours: three singles, three pairwise blends and one three-way blend.
+ * colours: three singles, three pairs, and one square where all three occur.
  *
- * The blends interpolate in oklch, not oklab. oklab averages the two hue
- * axes through zero, so blue and amber — nearly opposite hues — cancel out
- * and land on a grey with almost no chroma: the square then reads as a dark
- * smudge on a grey board and says nothing. oklch walks the hue arc instead
- * and keeps the chroma, so the same pair comes out as a clear magenta.
- * Every blend below keeps a chroma of roughly 0.12–0.19. */
+ * A single status is one flat colour. A pair is a gradient that carries both
+ * colours, one at each corner. All three at once stays one flat colour: a
+ * square holding three colours stops being readable at a glance, and the
+ * whole point of the board is reading it at a glance. */
 .tb-cell.is-c-run {
 	--tb-face: var(--tb-run);
 }
@@ -776,14 +778,34 @@ window.__ModuleLoader__.load({
 .tb-cell.is-c-done {
 	--tb-face: var(--tb-done);
 }
+/* Two statuses at once are not blended into one colour: a blend would average
+ * them into a third colour that is neither, and blue + amber averages to grey.
+ * The square carries both instead — one pure colour at the top-left corner,
+ * the other at the bottom-right, with a gradient between. The order is fixed
+ * (run, then wait, then done) so the same pair always reads the same way.
+ *
+ * The gradient interpolates in oklch for the same reason the blends used to:
+ * a straight sRGB ramp from blue to amber passes through a dead grey-brown
+ * halfway, while the oklch arc stays saturated the whole way. */
 .tb-cell.is-c-done-run {
-	--tb-face: color-mix(in oklch, var(--tb-run) 50%, var(--tb-done) 50%);
+	--tb-face-a: var(--tb-run);
+	--tb-face-b: var(--tb-done);
 }
 .tb-cell.is-c-run-wait {
-	--tb-face: color-mix(in oklch, var(--tb-run) 50%, var(--tb-wait) 50%);
+	--tb-face-a: var(--tb-run);
+	--tb-face-b: var(--tb-wait);
 }
 .tb-cell.is-c-done-wait {
-	--tb-face: color-mix(in oklch, var(--tb-done) 50%, var(--tb-wait) 50%);
+	--tb-face-a: var(--tb-wait);
+	--tb-face-b: var(--tb-done);
+}
+/* The corners have to stay pure, so a two-colour square drops the lit-panel
+ * frame the single-colour squares wear: that frame darkens the edges, which
+ * is exactly where the two pure colours sit. */
+.tb-cell[data-wskey].is-c-pair {
+	--tb-face: var(--tb-face-a);
+	background-color: transparent;
+	background-image: linear-gradient(135deg in oklch, var(--tb-face-a) 0%, var(--tb-face-b) 100%);
 }
 /* All three at once has no free arc left: every point between the three
  * primaries already belongs to a pair, so a blend of all three always lands

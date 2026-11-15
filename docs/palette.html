@@ -2,20 +2,13 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>dsh-grid-gui · 状态配色对照</title>
+<title>dsh-grid-gui · 状态配色</title>
 <style>
 	:root {
 		--run: #4176e6;
 		--wait: #f59e0b;
 		--done: #22c55e;
-		--old-run-done: #2aa3ad;
-		--old-run-wait: #9f949f;
-		--old-done-wait: #adb643;
-		--old-all: #87a68d;
-		--new-run-done: #00adc9;
-		--new-run-wait: #e066ad;
-		--new-done-wait: #b5b400;
-		--new-all: #a369de;
+		--all: #a369de;
 		--ink: #1b1b1b;
 		--muted: #6b6b6b;
 		--line: #e2e2e2;
@@ -30,7 +23,7 @@
 		font: 15px/1.65 "Inter", "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", sans-serif;
 	}
 	h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
-	.lede { margin: 0 0 40px; color: var(--muted); max-width: 62ch; }
+	.lede { margin: 0 0 40px; color: var(--muted); max-width: 64ch; }
 	h2 { margin: 44px 0 14px; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 	.row { display: flex; gap: 26px; flex-wrap: wrap; }
 	.cell { width: 132px; }
@@ -39,27 +32,24 @@
 		display: grid; place-items: center;
 		background: var(--c);
 	}
+	.square.grad { background: linear-gradient(135deg in oklch, var(--a) 0%, var(--b) 100%); }
 	.square svg { width: 46%; height: 46%; color: #fff; opacity: 0.62; }
 	.name { margin-top: 10px; font-size: 13px; font-weight: 600; }
 	.hex { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-	.pair { display: flex; gap: 26px; align-items: flex-start; }
-	.arrow { align-self: center; color: var(--muted); font-size: 20px; }
+	.note { margin-top: 34px; padding: 16px 18px; background: #fafafa; border-left: 2px solid var(--line); color: var(--muted); max-width: 72ch; font-size: 13px; }
+	.note b { color: var(--ink); font-weight: 600; }
 	table { border-collapse: collapse; margin-top: 8px; font-size: 13px; }
 	th, td { text-align: left; padding: 7px 18px 7px 0; border-bottom: 1px solid var(--line); }
 	th { color: var(--muted); font-weight: 500; font-size: 12px; letter-spacing: 0.04em; }
-	td.num { font-variant-numeric: tabular-nums; }
-	.bad { color: #b3261e; font-weight: 600; }
-	.good { color: #1a7f37; font-weight: 600; }
-	.swatch { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin-right: 6px; }
-	.note { margin-top: 34px; padding: 16px 18px; background: #fafafa; border-left: 2px solid var(--line); color: var(--muted); max-width: 70ch; font-size: 13px; }
+	.swatch { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 7px; }
 </style>
 </head>
 <body>
 
-<h1>状态配色对照</h1>
-<p class="lede">一层方块的七种状态组合。改的是两两混合的插值空间：从 oklab 换成 oklch。三个基色一个没动。</p>
+<h1>状态配色</h1>
+<p class="lede">一层方块的七种状态组合。单个状态用纯色，两种状态用渐变（一个角一种颜色），三种状态用纯紫。</p>
 
-<h2>三个基色（未改动）</h2>
+<h2>单个状态 · 纯色</h2>
 <div class="row">
 	<div class="cell">
 		<div class="square" style="--c: var(--run)"></div>
@@ -78,82 +68,47 @@
 	</div>
 </div>
 
-<h2>改前 · oklab 混合</h2>
+<h2>两种状态 · 渐变</h2>
 <div class="row">
 	<div class="cell">
-		<div class="square" style="--c: var(--old-run-done)"></div>
-		<div class="name">完成 + 运行</div>
-		<div class="hex">#2aa3ad · 彩度 0.10</div>
-	</div>
-	<div class="cell">
-		<div class="square" style="--c: var(--old-run-wait)"></div>
+		<div class="square grad" style="--a: var(--run); --b: var(--wait)"></div>
 		<div class="name">运行 + 等待</div>
-		<div class="hex">#9f949f · <span class="bad">彩度 0.02</span></div>
+		<div class="hex">左上蓝 → 右下琥珀</div>
 	</div>
 	<div class="cell">
-		<div class="square" style="--c: var(--old-done-wait)"></div>
+		<div class="square grad" style="--a: var(--run); --b: var(--done)"></div>
+		<div class="name">完成 + 运行</div>
+		<div class="hex">左上蓝 → 右下绿</div>
+	</div>
+	<div class="cell">
+		<div class="square grad" style="--a: var(--wait); --b: var(--done)"></div>
 		<div class="name">完成 + 等待</div>
-		<div class="hex">#adb643 · 彩度 0.14</div>
-	</div>
-	<div class="cell">
-		<div class="square" style="--c: var(--old-all)"></div>
-		<div class="name">三种都有</div>
-		<div class="hex">#87a68d · <span class="bad">彩度 0.05</span></div>
+		<div class="hex">左上琥珀 → 右下绿</div>
 	</div>
 </div>
 
-<h2>改后 · oklch 混合</h2>
+<h2>三种状态 · 纯色</h2>
 <div class="row">
 	<div class="cell">
-		<div class="square" style="--c: var(--new-run-done)"></div>
-		<div class="name">完成 + 运行</div>
-		<div class="hex">#00adc9 · <span class="good">彩度 0.19</span></div>
-	</div>
-	<div class="cell">
-		<div class="square" style="--c: var(--new-run-wait)"></div>
-		<div class="name">运行 + 等待</div>
-		<div class="hex">#e066ad · <span class="good">彩度 0.17</span></div>
-	</div>
-	<div class="cell">
-		<div class="square" style="--c: var(--new-done-wait)"></div>
-		<div class="name">完成 + 等待</div>
-		<div class="hex">#b5b400 · <span class="good">彩度 0.18</span></div>
-	</div>
-	<div class="cell">
-		<div class="square" style="--c: var(--new-all)"></div>
+		<div class="square" style="--c: var(--all)"></div>
 		<div class="name">三种都有</div>
-		<div class="hex">#a369de · <span class="good">彩度 0.18</span></div>
+		<div class="hex">#a369de</div>
 	</div>
 </div>
 
-<h2>关键的一对</h2>
-<div class="pair">
-	<div class="cell">
-		<div class="square" style="--c: var(--old-run-wait)"></div>
-		<div class="name">运行 + 等待</div>
-		<div class="hex">oklab → #9f949f</div>
-	</div>
-	<div class="arrow">→</div>
-	<div class="cell">
-		<div class="square" style="--c: var(--new-run-wait)"></div>
-		<div class="name">运行 + 等待</div>
-		<div class="hex">oklch → #e066ad</div>
-	</div>
-</div>
-
-<h2>数值</h2>
+<h2>顺序</h2>
 <table>
-	<tr><th>组合</th><th>改前</th><th>改后</th><th>彩度</th><th>对白底对比度</th></tr>
-	<tr><td>完成 + 运行</td><td><span class="swatch" style="background: var(--old-run-done)"></span>#2aa3ad</td><td><span class="swatch" style="background: var(--new-run-done)"></span>#00adc9</td><td class="num">0.10 → 0.19</td><td class="num">2.70 → 2.69</td></tr>
-	<tr><td>运行 + 等待</td><td><span class="swatch" style="background: var(--old-run-wait)"></span>#9f949f</td><td><span class="swatch" style="background: var(--new-run-wait)"></span>#e066ad</td><td class="num bad">0.02 → 0.17</td><td class="num">2.60 → 3.15</td></tr>
-	<tr><td>完成 + 等待</td><td><span class="swatch" style="background: var(--old-done-wait)"></span>#adb643</td><td><span class="swatch" style="background: var(--new-done-wait)"></span>#b5b400</td><td class="num">0.14 → 0.18</td><td class="num">1.96 → 2.21</td></tr>
-	<tr><td>三种都有</td><td><span class="swatch" style="background: var(--old-all)"></span>#87a68d</td><td><span class="swatch" style="background: var(--new-all)"></span>#a369de</td><td class="num bad">0.05 → 0.18</td><td class="num">2.38 → 3.73</td></tr>
+	<tr><th>组合</th><th>左上</th><th>右下</th></tr>
+	<tr><td>运行 + 等待</td><td><span class="swatch" style="background: var(--run)"></span>运行</td><td><span class="swatch" style="background: var(--wait)"></span>等待</td></tr>
+	<tr><td>完成 + 运行</td><td><span class="swatch" style="background: var(--run)"></span>运行</td><td><span class="swatch" style="background: var(--done)"></span>完成</td></tr>
+	<tr><td>完成 + 等待</td><td><span class="swatch" style="background: var(--wait)"></span>等待</td><td><span class="swatch" style="background: var(--done)"></span>完成</td></tr>
 </table>
 
 <p class="note">
-	为什么 oklab 会变灰：它把 a、b 两个色度轴各自线性平均。蓝和琥珀的色相几乎相反，两个轴上的分量正负相消，平均后彩度只剩 0.02 —— 等于没有颜色，只剩明度。在灰底上就是一块暗斑。<br><br>
-	oklch 是同一个空间的极坐标形式，插值走色相弧、保留彩度，所以同一对颜色混出来是明确的品红。<br><br>
-	「三种都有」没有可用的色相弧：三个基色之间的每一段都已被某个两两组合占住，三色混合必然落在其中一个上。所以这一种固定用紫色，唯一没被占用的色相。
+	<b>为什么两种状态不用混合。</b>混合会把两种颜色平均成第三种，蓝和琥珀平均出来是灰——两种颜色都不是，在灰底上就是一块暗斑。渐变让方块同时容纳两种颜色：左上角纯的一种，右下角纯的另一种，中间过渡。<br><br>
+	<b>为什么渐变在 oklch 里插值。</b>直接走 sRGB 的话，蓝到琥珀的中点会经过一段死灰褐色；oklch 沿色相弧走，全程保持饱和。实测中点：sRGB 是灰，oklch 是品红。<br><br>
+	<b>为什么三种状态不用渐变。</b>一个方块里挤三种颜色就不再是一眼能读的信息，而这块板子的全部意义就是一眼读完。紫色是唯一没被单色和两两组合占用的色相。<br><br>
+	<b>渐变格没有「灯板」边框。</b>单色格有一圈把边缘压暗的描边，让方块读成从中心发光的灯板。渐变格去掉了它——那圈压暗正好落在两个纯色角上，会把颜色弄脏。
 </p>
 
 </body>
