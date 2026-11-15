@@ -811,12 +811,24 @@ window.__ModuleLoader__.load({
 .tb-cell[data-wskey].is-c-pair {
 	--tb-face: var(--tb-face-a);
 	background-color: transparent;
+	background-image: none;
+}
+/* The two colours have to reach the four edges, so they are laid down as two
+ * halves that meet on the anti-diagonal — a hard seam, because any soft seam
+ * would put a third, blended colour on the top-right and bottom-left corners.
+ * What keeps it from reading as a cut is the hole: the middle is masked away,
+ * so the two colours dissolve into the board just before they would meet.
+ * The face lives on a pseudo-element because the mask must not eat the glyph. */
+.tb-cell[data-wskey].is-c-pair::before {
+	content: "";
+	position: absolute;
+	inset: 0;
 	background-image: linear-gradient(
 		135deg,
-		var(--tb-face-a) 0 30%,
-		transparent 42% 58%,
-		var(--tb-face-b) 70% 100%
+		var(--tb-face-a) 0 50%,
+		var(--tb-face-b) 50% 100%
 	);
+	mask-image: radial-gradient(circle at 50% 50%, transparent 0 13%, #000 31%);
 }
 /* A two-colour square still has to read as a lit panel, or it stops looking
  * like a Workspace square at all. The four-frame trick the flat squares use
