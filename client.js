@@ -759,7 +759,14 @@ window.__ModuleLoader__.load({
 /* A Workspace square takes the colour of the statuses its own Sessions are
  * in. Only run / wait / done count, so a quiet Workspace stays grey however
  * many idle Sessions it holds. Seven combinations, all read off three pure
- * colours: three singles, three pairwise blends and one three-way blend. */
+ * colours: three singles, three pairwise blends and one three-way blend.
+ *
+ * The blends interpolate in oklch, not oklab. oklab averages the two hue
+ * axes through zero, so blue and amber — nearly opposite hues — cancel out
+ * and land on a grey with almost no chroma: the square then reads as a dark
+ * smudge on a grey board and says nothing. oklch walks the hue arc instead
+ * and keeps the chroma, so the same pair comes out as a clear magenta.
+ * Every blend below keeps a chroma of roughly 0.12–0.19. */
 .tb-cell.is-c-run {
 	--tb-face: var(--tb-run);
 }
@@ -770,16 +777,20 @@ window.__ModuleLoader__.load({
 	--tb-face: var(--tb-done);
 }
 .tb-cell.is-c-done-run {
-	--tb-face: color-mix(in oklab, var(--tb-run) 50%, var(--tb-done) 50%);
+	--tb-face: color-mix(in oklch, var(--tb-run) 50%, var(--tb-done) 50%);
 }
 .tb-cell.is-c-run-wait {
-	--tb-face: color-mix(in oklab, var(--tb-run) 50%, var(--tb-wait) 50%);
+	--tb-face: color-mix(in oklch, var(--tb-run) 50%, var(--tb-wait) 50%);
 }
 .tb-cell.is-c-done-wait {
-	--tb-face: color-mix(in oklab, var(--tb-done) 50%, var(--tb-wait) 50%);
+	--tb-face: color-mix(in oklch, var(--tb-done) 50%, var(--tb-wait) 50%);
 }
+/* All three at once has no free arc left: every point between the three
+ * primaries already belongs to a pair, so a blend of all three always lands
+ * on top of one of them. This state therefore takes the one hue none of the
+ * singles or pairs uses — violet — as a fixed value rather than a blend. */
 .tb-cell.is-c-done-run-wait {
-	--tb-face: color-mix(in oklab, var(--tb-run) 34%, color-mix(in oklab, var(--tb-wait) 50%, var(--tb-done) 50%) 66%);
+	--tb-face: #a369de;
 }
 .tb-cell.is-colored:hover {
 	filter: brightness(1.12);
