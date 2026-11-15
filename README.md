@@ -1,4 +1,4 @@
-# @local/dsh-grid-gui — 方格工作区
+# dsh-grid-gui — 方格工作区
 
 把工作区的主视图从「一条条列表」换成一面灰色小方块矩阵：**一格一个工作区，点进去变成那一格的会话，再点一格就直接进会话**。形状取自 Yamaha Tenori-on 的灯阵——纯灰、无边框、方格、居中，靠中亮边暗的发光区分层次。
 
@@ -100,12 +100,12 @@ PUT /grid-gui/icons   <- { key, icon: { kind, value } | null }   // null = 恢�
 install_bundle  target = <本仓库的绝对路径>
 ```
 
-它会做三件事：往 profile 的 `package.json` 里加 `"@local/dsh-grid-gui": "link:…"`、把包加进 `bundles` 列表、跑 pnpm 更新 lockfile。装完 `cordis.patch.yml` 里的 `insert` 条目由包自带的 patch 注入：
+它会做三件事：往 profile 的 `package.json` 里加 `"dsh-grid-gui": "link:…"`、把包加进 `bundles` 列表、跑 pnpm 更新 lockfile。装完 `cordis.patch.yml` 里的 `insert` 条目由包自带的 patch 注入：
 
 ```yaml
 - insert:
     - id: dsh-grid-gui
-      name: '@local/dsh-grid-gui'
+      name: 'dsh-grid-gui'
 ```
 
 **改名或改包名之后不能只 `mv` 目录**：链接依赖、`bundles` 条目、lockfile 里的 specifier 都指着旧名字，必须 `remove_bundle` 再 `install_bundle` 重建。
@@ -129,7 +129,7 @@ curl -s -H "cookie: <签名 cookie>" http://127.0.0.1:3080/grid-gui/icons
 | `locale/zh.json`、`locale/en.json` | 插件管理器里显示的标题与描述 |
 | `icon.svg` | 插件列表里的图标 |
 
-样式表以 `@local/dsh-grid-gui` 为 `data-plugin-css` 标识注入一次，语言包命名空间 `gridGui`，中英双语的文案都写在 `client.js` 顶部的 `zh` / `en` 对象里。
+样式表以 `dsh-grid-gui` 为 `data-plugin-css` 标识注入一次，语言包命名空间 `gridGui`，中英双语的文案都写在 `client.js` 顶部的 `zh` / `en` 对象里。
 
 ## 已知取舍
 

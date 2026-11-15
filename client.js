@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "@local/dsh-grid-gui",
+	id: "dsh-grid-gui",
 	factory(require) {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -14,7 +14,7 @@ window.__ModuleLoader__.load({
 		/** Stable key of the board panel inside the `main` slot. */
 		const PANEL_ID = "board";
 		/** `data-plugin-css` identity of the static sheet. */
-		const STYLE_ID = "@local/dsh-grid-gui";
+		const STYLE_ID = "dsh-grid-gui";
 
 		/** Smallest board square edge in px. */
 		const CELL_MIN = 32;
