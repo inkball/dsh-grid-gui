@@ -38,7 +38,8 @@ window.__ModuleLoader__.load({
 			"board.emptyHint": "在侧边栏新建一个工作区之后，这里会长出第一块方格。",
 			"board.emptyRoom": "这个工作区还没有会话",
 			"board.emptyRoomHint": "点虚线方格就能开一个。",
-			"board.newSession": "在此新建会话",
+			"board.newSession": "新建并进入会话",
+			"board.newSessionHint": "新建后直接进入新会话页",
 			"board.open": "进入会话",
 			"board.pinSession": "置顶会话",
 			"board.unpinSession": "取消置顶",
@@ -73,7 +74,8 @@ window.__ModuleLoader__.load({
 			"board.emptyHint": "Create a Workspace from the sidebar and its first square appears here.",
 			"board.emptyRoom": "This Workspace has no Session yet",
 			"board.emptyRoomHint": "Click the dashed square to start one.",
-			"board.newSession": "New Session here",
+			"board.newSession": "New Session and open it",
+			"board.newSessionHint": "Starts a Session and opens it right away",
 			"board.open": "Open Session",
 			"board.pinSession": "Pin Session",
 			"board.unpinSession": "Unpin Session",
@@ -509,12 +511,24 @@ window.__ModuleLoader__.load({
 				});
 			}
 			const loose = (list.ids ?? []).filter((id) => known(id) && !accounted.has(id));
-			if (loose.length > 0) {
+			/* A Session started from the add square belongs at the end of the
+			 * grid, but a blank Session has no messages yet, so the shipped
+			 * list has nothing to sort it by and parks it at the head. Sort
+			 * every block newest-first instead: one rule for both layers,
+			 * and the add square stays the last square on the board.
+			 * `list.ids` is already newest-first, so its index is the rank. */
+			const rank = new Map();
+			(list.ids ?? []).forEach((id, index) => rank.set(id, index));
+			const byRecency = (ids) =>
+				ids.slice().sort((a, b) => (rank.get(a) ?? Infinity) - (rank.get(b) ?? Infinity));
+			for (const block of blocks) block.sessionIds = byRecency(block.sessionIds);
+			const looseSorted = byRecency(loose);
+			if (looseSorted.length > 0) {
 				blocks.push({
 					key: LOOSE_KEY,
 					workspaceId: undefined,
 					title: ungroupedTitle,
-					sessionIds: loose,
+					sessionIds: looseSorted,
 				});
 			}
 			return blocks;
@@ -799,6 +813,12 @@ window.__ModuleLoader__.load({
 	outline: 2px solid var(--dsw-alias-brand-primary);
 	outline-offset: 2px;
 }
+/* The one-frame acknowledgement before the conversation takes over: the
+ * square is already drawn as current, so only the press needs saying. */
+.tb-cell.is-opening {
+	transform: scale(0.94);
+	filter: brightness(0.9);
+}
 .tb-cell.is-pinned::before {
 	content: "";
 	position: absolute;
@@ -957,6 +977,11 @@ window.__ModuleLoader__.load({
 }
 .tb-menu-item:hover {
 	background: var(--dsw-alias-bg-layer-1);
+}
+/* Deleting a Workspace is the one irreversible-looking entry in the menu;
+ * it reads as a warning even before the confirmation dialog opens. */
+.tb-menu-item.is-danger {
+	color: var(--dsw-alias-state-error-primary, #c0392b);
 }
 .tb-menu-sep {
 	height: 1px;
@@ -1315,7 +1340,7 @@ window.__ModuleLoader__.load({
 							className: "tb-menu-item",
 							onClick: () => {
 								control.onClose();
-								if (block.workspaceId !== undefined) api.startBlank(block.workspaceId);
+								if (block.workspaceId !== undefined) control.onNewSession(block.workspaceId);
 							},
 						},
 						t("board.newSession"),
@@ -1381,30 +1406,37 @@ window.__ModuleLoader__.load({
 					t("board.changeIcon"),
 				),
 			);
-			items.push(
-				h(
-					"button",
-					{
-						key: "rename",
-						type: "button",
-						className: "tb-menu-item",
-						onClick: () => control.onDialog({ kind: "rename", block, value: block.title }),
-					},
-					t("board.renameWorkspace"),
-				),
-			);
-			items.push(
-				h(
-					"button",
-					{
-						key: "delete",
-						type: "button",
-						className: "tb-menu-item",
-						onClick: () => control.onDialog({ kind: "delete", block }),
-					},
-					t("board.deleteWorkspace"),
-				),
-			);
+			/* Rename and delete act on the Workspace, so they belong to the
+			 * Workspace layer only. Offering them on a Session square — the
+			 * layer where the reader is aiming at one Session — puts a
+			 * destructive Workspace action one slip away from a Session
+			 * action, so the Session layer simply does not carry them. */
+			if (menu.sessionId === null) {
+				items.push(
+					h(
+						"button",
+						{
+							key: "rename",
+							type: "button",
+							className: "tb-menu-item",
+							onClick: () => control.onDialog({ kind: "rename", block, value: block.title }),
+						},
+						t("board.renameWorkspace"),
+					),
+				);
+				items.push(
+					h(
+						"button",
+						{
+							key: "delete",
+							type: "button",
+							className: "tb-menu-item is-danger",
+							onClick: () => control.onDialog({ kind: "delete", block }),
+						},
+						t("board.deleteWorkspace"),
+					),
+				);
+			}
 			return h(
 				Fragment,
 				null,
@@ -1640,15 +1672,50 @@ window.__ModuleLoader__.load({
 				if (entered !== null && room === null) setView(null);
 			}, [entered, room]);
 
+			/* Opening a Session is the one click that has to feel instant, and
+			 * the shipped conversation view costs a long task to mount. So the
+			 * square answers on the very next frame: it turns into the current
+			 * square, and the board dims in the same frame, before the click
+			 * handler hands over to the conversation. Without this the reader
+			 * stares at an unchanged grid for the length of that mount. */
+			const [opening, setOpening] = useState(null);
+			useEffect(() => {
+				if (opening === null) return undefined;
+				const timer = setTimeout(() => setOpening(null), 900);
+				return () => clearTimeout(timer);
+			}, [opening]);
+
 			const needle = query.trim().toLowerCase();
 			const pinned = new Set(snapshot.pinnedSessionIds ?? []);
 
 			const closeMenu = useCallback(() => setMenu(null), []);
 
+			/* Starting a Session from the grid does leave the grid: the shipped
+			 * Session view only shows a blank Session while it is the current
+			 * one (`sessionVisible` drops every other blank), so a blank left
+			 * behind on the board would be an invisible orphan that piles up in
+			 * the store. `openWorkspace` creates the blank and opens it in one
+			 * step, which is exactly the one behaviour the store supports — the
+			 * label and the hover hint say so instead of hiding it. */
+			const startSession = useCallback(
+				(workspaceId) => {
+					if (workspaceId === undefined) return;
+					api.startBlank(workspaceId);
+				},
+				[api],
+			);
+
 			const onOpen = useCallback(
 				(sessionId) => {
 					closeMenu();
-					api.openSession(sessionId);
+					/* Paint the acknowledgement first, then hand over: the
+					 * state update is committed on the next frame, and the
+					 * conversation mount runs after it, so the reader sees the
+					 * square react instead of a frozen grid. */
+					setOpening(sessionId);
+					requestAnimationFrame(() => {
+						api.openSession(sessionId);
+					});
 				},
 				[api, closeMenu],
 			);
@@ -1772,6 +1839,7 @@ window.__ModuleLoader__.load({
 					let className = "tb-cell";
 					if (state !== "idle") className += " is-" + state;
 					if (isCurrent(list, sessionId)) className += " is-current";
+					if (opening === sessionId) className += " is-current is-opening";
 					if (!hit) className += " is-dim";
 					if (pinned.has(sessionId)) className += " is-pinned";
 					if (dragging !== null && dragging.sessionId === sessionId) className += " is-drag";
@@ -1806,9 +1874,9 @@ window.__ModuleLoader__.load({
 							key: "\u0000add",
 							type: "button",
 							className: "tb-cell is-add" + (needle !== "" ? " is-dim" : ""),
-							title: t("board.newSession"),
+							title: t("board.newSessionHint"),
 							"aria-label": t("board.newSession") + " · " + room.title,
-							onClick: () => api.startBlank(room.workspaceId),
+							onClick: () => startSession(room.workspaceId),
 							onContextMenu: (event) => openMenu(event, room, null),
 						}),
 					);
@@ -1822,6 +1890,7 @@ window.__ModuleLoader__.load({
 							pinned: menu.sessionId === null ? false : pinned.has(menu.sessionId),
 							onClose: closeMenu,
 							onOpen,
+							onNewSession: startSession,
 							onDialog: (next) => {
 								closeMenu();
 								setDialog(next);
