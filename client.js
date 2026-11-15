@@ -813,12 +813,10 @@ window.__ModuleLoader__.load({
 	background-color: transparent;
 	background-image: none;
 }
-/* The two colours have to reach the four edges, so they are laid down as two
- * halves that meet on the anti-diagonal — a hard seam, because any soft seam
- * would put a third, blended colour on the top-right and bottom-left corners.
- * What keeps it from reading as a cut is the hole: the middle is masked away,
- * so the two colours dissolve into the board just before they would meet.
- * The face lives on a pseudo-element because the mask must not eat the glyph. */
+/* Two flat halves that meet on the anti-diagonal: no fade, no hole. Each
+ * colour fills its own corner and runs all the way to the seam, so the square
+ * carries exactly the two colours that are present and nothing else — no
+ * blended third colour, no background showing through. */
 .tb-cell[data-wskey].is-c-pair::before {
 	content: "";
 	position: absolute;
@@ -828,12 +826,6 @@ window.__ModuleLoader__.load({
 		var(--tb-face-a) 0 50%,
 		var(--tb-face-b) 50% 100%
 	);
-	/* A square hole, not a round one: two bands that are empty in the middle
-	 * and full at the edges, added together, leave exactly the centre open. */
-	mask-image:
-		linear-gradient(to right, #000 0 12%, transparent 28% 72%, #000 88% 100%),
-		linear-gradient(to bottom, #000 0 12%, transparent 28% 72%, #000 88% 100%);
-	mask-composite: add;
 }
 /* A two-colour square still has to read as a lit panel, or it stops looking
  * like a Workspace square at all. The four-frame trick the flat squares use
