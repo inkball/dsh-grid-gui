@@ -220,7 +220,7 @@ window.__ModuleLoader__.load({
 		 * luminosity`, so the sheet only ever contributes light and shade and
 		 * the square keeps supplying the hue. Storing it grey rather than
 		 * coloured means the same icon reads blue on a running Workspace and
-		 * green on a finished one, which is what a Tenori-on block does, and a
+		 * green on a finished one, which is what a lit panel does, and a
 		 * grey WebP is a good deal smaller than a colour one.
 		 *
 		 * @param {CanvasRenderingContext2D} context - the square's context.
@@ -730,8 +730,8 @@ window.__ModuleLoader__.load({
 	z-index: 2;
 }
 /* Layer one reads as lit panels rather than paint: the face is brightest in
- * the middle and falls off towards the corners, which is how a Tenori-on
- * block looks in the dark. Layer two keeps the flat face, so the two layers
+ * the middle and falls off towards the corners, which is how a lit panel
+ * looks in the dark. Layer two keeps the flat face, so the two layers
  * are told apart by surface, not only by what is written on them. */
 .tb-cell[data-wskey] {
 	--tb-face: var(--dsw-alias-state-idle-primary);
@@ -877,7 +877,7 @@ window.__ModuleLoader__.load({
  * The luminosity blend is the reason a picked picture is stored grey: the
  * face supplies light and shade only, and the square below keeps supplying
  * the hue. A running Workspace therefore glows blue with its icon inside it,
- * a finished one green, which is how a Tenori-on block behaves. */
+ * a finished one green, which is how a lit panel behaves. */
 .tb-cell-face {
 	position: absolute;
 	inset: 0;
@@ -1617,7 +1617,7 @@ window.__ModuleLoader__.load({
 		 * ------------------------------------------------------------------ */
 
 		/**
-		 * The two Tenori layers in one panel. Layer one is one square per
+		 * The two layers in one panel. Layer one is one square per
 		 * Workspace; clicking a square enters that Workspace and the same grid
 		 * becomes its Sessions. Search never reflows either layer — it only
 		 * drops contrast on the squares that do not match.
@@ -2026,7 +2026,7 @@ window.__ModuleLoader__.load({
 		 * ------------------------------------------------------------------ */
 
 		/**
-		 * One tenori-on rod per Workspace, borrowed wholesale from the shipped
+		 * One rod per Workspace, borrowed wholesale from the shipped
 		 * Turn navigator: a fixed-pitch rail of 10px hit areas, each drawing a
 		 * 2px bar, scrolling without a scrollbar and fading at both ends, and
 		 * naming itself only through a hover preview. The bar keeps one length
