@@ -1321,7 +1321,7 @@ window.__ModuleLoader__.load({
 		 * ------------------------------------------------------------------ */
 
 		/**
-		 * @param {object} menu - `{ x, y, block, sessionId }`.
+		 * @param {object} menu - `{ x, y, block, sessionId, scope }`.
 		 * @param {object} api - injected actions.
 		 * @param {Function} t - translate.
 		 * @param {object} control - pinned flag plus close/open/dialog callbacks.
@@ -1330,7 +1330,13 @@ window.__ModuleLoader__.load({
 		function renderMenu(menu, api, t, control) {
 			const block = menu.block;
 			const items = [];
-			if (menu.sessionId === null) {
+			/* `scope` says which layer opened the menu, and it — not the
+			 * presence of a Session id — decides what may appear. The two
+			 * layers act on different things: a Session square never offers
+			 * Workspace operations, so deleting a Workspace can only ever be
+			 * reached from the layer that shows Workspaces. */
+			const workspaceScope = menu.scope === "workspace";
+			if (workspaceScope) {
 				items.push(
 					h(
 						"button",
@@ -1411,7 +1417,7 @@ window.__ModuleLoader__.load({
 			 * layer where the reader is aiming at one Session — puts a
 			 * destructive Workspace action one slip away from a Session
 			 * action, so the Session layer simply does not carry them. */
-			if (menu.sessionId === null) {
+			if (workspaceScope) {
 				items.push(
 					h(
 						"button",
@@ -1720,7 +1726,7 @@ window.__ModuleLoader__.load({
 				[api, closeMenu],
 			);
 
-			const openMenu = useCallback((event, block, sessionId, title) => {
+			const openMenu = useCallback((event, block, sessionId, title, scope) => {
 				event.preventDefault();
 				if (block.workspaceId === undefined) return;
 				setMenu({
@@ -1729,6 +1735,11 @@ window.__ModuleLoader__.load({
 					block,
 					sessionId,
 					title: title === undefined ? block.title : title,
+					/* The scope comes from the call site, never from the shape of
+					 * `sessionId`: the add square sits on the Session layer but
+					 * carries no Session, and inferring from the id alone handed
+					 * it the Workspace menu — including Delete Workspace. */
+					scope: scope === undefined ? "workspace" : scope,
 				});
 			}, []);
 
@@ -1820,7 +1831,7 @@ window.__ModuleLoader__.load({
 								},
 								onPointerLeave: () => setHint(null),
 								onClick: () => setView(block.key),
-								onContextMenu: (event) => openMenu(event, block, null),
+								onContextMenu: (event) => openMenu(event, block, null, undefined, "workspace"),
 							},
 							renderFace("w:" + String(block.workspaceId ?? block.key), block.title),
 						),
@@ -1861,7 +1872,7 @@ window.__ModuleLoader__.load({
 								},
 								onPointerLeave: () => setHint(null),
 								onClick: () => onOpen(sessionId),
-								onContextMenu: (event) => openMenu(event, room, sessionId, title),
+								onContextMenu: (event) => openMenu(event, room, sessionId, title, "session"),
 								onPointerDown: (event) => beginDrag(event, room, sessionId),
 							},
 							renderFace("s:" + sessionId, title),
@@ -1877,7 +1888,10 @@ window.__ModuleLoader__.load({
 							title: t("board.newSessionHint"),
 							"aria-label": t("board.newSession") + " · " + room.title,
 							onClick: () => startSession(room.workspaceId),
-							onContextMenu: (event) => openMenu(event, room, null),
+							/* The add square carries no Session, so there is
+							 * nothing to act on here; it must never fall back to
+							 * the Workspace menu. */
+							onContextMenu: (event) => event.preventDefault(),
 						}),
 					);
 				}
