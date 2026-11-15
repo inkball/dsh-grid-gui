@@ -803,18 +803,40 @@ window.__ModuleLoader__.load({
  * frame the single-colour squares wear: that frame darkens the edges, which
  * is exactly where the two pure colours sit.
  *
- * The two halves meet a hard stop on either side of an empty band. No colour
- * is interpolated across it — the band is transparent, so the board shows
- * through and the square reads as two colours with a gap, not as a blend. */
+ * Reading along the diagonal: one colour flat, a fade out, a band with no
+ * colour at all, a fade in, the other colour flat. The two colours never
+ * meet — the first has finished fading before the second starts — so
+ * nothing is ever blended between them, and the middle is the board
+ * showing through. The fades are what keep it from reading as a cut. */
 .tb-cell[data-wskey].is-c-pair {
 	--tb-face: var(--tb-face-a);
 	background-color: transparent;
 	background-image: linear-gradient(
 		135deg,
-		var(--tb-face-a) 0 46%,
-		transparent 46% 54%,
-		var(--tb-face-b) 54% 100%
+		var(--tb-face-a) 0 30%,
+		transparent 42% 58%,
+		var(--tb-face-b) 70% 100%
 	);
+}
+/* A two-colour square still has to read as a lit panel, or it stops looking
+ * like a Workspace square at all. The four-frame trick the flat squares use
+ * cannot be copied here: those frames paint the face colour over the border,
+ * which would bury the two pure corners and plug the empty band where it
+ * crosses the edges. So the same square-shaped centre is cut out as a mask
+ * instead, and the centre is lifted with a backdrop filter — the face is
+ * left exactly as drawn, only brighter towards the middle. */
+.tb-cell[data-wskey].is-c-pair::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	backdrop-filter: brightness(1.16);
+	mask-image:
+		linear-gradient(to right, transparent 0 12%, #000 34%),
+		linear-gradient(to left, transparent 0 12%, #000 34%),
+		linear-gradient(to bottom, transparent 0 12%, #000 34%),
+		linear-gradient(to top, transparent 0 12%, #000 34%);
+	mask-composite: intersect;
 }
 /* All three at once has no free arc left: every point between the three
  * primaries already belongs to a pair, so a blend of all three always lands

@@ -32,7 +32,14 @@
 		display: grid; place-items: center;
 		background: var(--c);
 	}
-	.square.grad { background: linear-gradient(135deg, var(--a) 0 46%, transparent 46% 54%, var(--b) 54% 100%); }
+	.square { position: relative; }
+	.square.grad { background: linear-gradient(135deg, var(--a) 0 30%, transparent 42% 58%, var(--b) 70% 100%); }
+	.square.grad::after {
+		content: ""; position: absolute; inset: 0; pointer-events: none;
+		backdrop-filter: brightness(1.16);
+		mask-image: linear-gradient(to right, transparent 0 12%, #000 34%), linear-gradient(to left, transparent 0 12%, #000 34%), linear-gradient(to bottom, transparent 0 12%, #000 34%), linear-gradient(to top, transparent 0 12%, #000 34%);
+		mask-composite: intersect;
+	}
 	.square svg { width: 46%; height: 46%; color: #fff; opacity: 0.62; }
 	.name { margin-top: 10px; font-size: 13px; font-weight: 600; }
 	.hex { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -73,17 +80,17 @@
 	<div class="cell">
 		<div class="square grad" style="--a: var(--run); --b: var(--wait)"></div>
 		<div class="name">运行 + 等待</div>
-		<div class="hex">左上蓝 / 空 / 右下琥珀</div>
+		<div class="hex">蓝 → 淡出 → 无 → 淡入 → 琥珀</div>
 	</div>
 	<div class="cell">
 		<div class="square grad" style="--a: var(--run); --b: var(--done)"></div>
 		<div class="name">完成 + 运行</div>
-		<div class="hex">左上蓝 / 空 / 右下绿</div>
+		<div class="hex">蓝 → 淡出 → 无 → 淡入 → 绿</div>
 	</div>
 	<div class="cell">
 		<div class="square grad" style="--a: var(--wait); --b: var(--done)"></div>
 		<div class="name">完成 + 等待</div>
-		<div class="hex">左上琥珀 / 空 / 右下绿</div>
+		<div class="hex">琥珀 → 淡出 → 无 → 淡入 → 绿</div>
 	</div>
 </div>
 
@@ -106,9 +113,9 @@
 
 <p class="note">
 	<b>为什么两种状态不用混合。</b>混合会把两种颜色平均成第三种，蓝和琥珀平均出来是灰——两种颜色都不是，在灰底上就是一块暗斑。<br><br>
-	<b>怎么做的。</b>方块沿对角线切成两半：左上角一种纯色，右下角一种纯色，中间留一条空带，什么都不画，露出底色。所以方块里永远只有两种颜色，绝不会出现第三种被混合出来的颜色。实测沿对角线采样：<code>#4176e6</code> → 空 → <code>#f59e0b</code>，中间没有过渡色。<br><br>
+	<b>怎么做的。</b>沿对角线读：一种纯色 → 淡出 → 一条完全无色的带 → 淡入 → 另一种纯色。两种颜色始终没有相遇——第一种在第二种开始之前就已经淡完了，所以中间不会混出第三种颜色。<br><br><b>实测（运行 + 等待，120px 方块的对角线）：</b><br>0–28% 纯蓝 <code>#4176e6</code>　·　30–40% 淡出　·　45–55% 完全无色 <code>#ffffff</code>　·　60–68% 淡入　·　70–100% 纯琥珀 <code>#f59e0b</code><br><br>
 	<b>为什么三种状态不用两半。</b>一个方块里挤三种颜色就不再是一眼能读的信息，而这块板子的全部意义就是一眼读完。紫色是唯一没被单色和两两组合占用的色相。<br><br>
-	<b>两半格没有「灯板」边框。</b>单色格有一圈把边缘压暗的描边，让方块读成从中心发光的灯板。两半格去掉了它——那圈压暗正好落在两个纯色角上，会把颜色弄脏。
+	<b>两半格同样有「灯板」提亮。</b>一层方块读成从中心发光的灯板（中心亮、边缘暗），二层会话格是平的——这是区分两层的表面特征，两半格不能例外。但单色格那套「用面色盖住四边」的做法在这里不能用：它会盖掉两个纯色角，还会把中间的空带堵住。所以改成用遮罩挖出中间那块方形，再用 backdrop-filter 提亮，画面本身一点不动，只是往中间变亮。
 </p>
 
 </body>
