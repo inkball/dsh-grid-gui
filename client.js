@@ -2240,13 +2240,47 @@ window.__ModuleLoader__.load({
 				const fn = target === undefined || target === null ? undefined : target[name];
 				if (typeof fn !== "function") {
 					report(new Error("this Harness build does not expose " + name + "()"));
-					return;
+					return undefined;
 				}
 				try {
-					guard(fn.apply(target, args));
+					const result = fn.apply(target, args);
+					guard(result);
+					return result;
 				} catch (error) {
 					report(error);
+					return undefined;
 				}
+			};
+
+			/**
+			 * Put the board back after an action that DSH answers by clearing the
+			 * main area.
+			 *
+			 * Archiving the Session that is open in the main area runs
+			 * `clearMain()`, which calls `selectPanel(null)` — that deselects the
+			 * board and drops the reader onto the new-Session page, even though
+			 * they were only tidying one square. Re-selecting the board once the
+			 * call settles keeps them where they were; when the archived Session
+			 * was not the open one, nothing was cleared and this is a no-op.
+			 */
+			const keepBoard = () => {
+				const apply = () => {
+					try {
+						if (ctx.layout.panelInfo.getSnapshot().activePanelId !== PANEL_ID) {
+							ctx.layout.selectPanel(PANEL_ID);
+							landed = true;
+						}
+					} catch {
+						/* the layout store may be gone during teardown */
+					}
+				};
+				/* `clearMain` runs inside the archive promise, and the follow-up
+				 * `restoreSelection` can replace the main area a moment later, so
+				 * claim the board now, on the next frame, and once more after the
+				 * dust settles. */
+				apply();
+				requestAnimationFrame(apply);
+				setTimeout(apply, 350);
 			};
 
 			/**
@@ -2269,7 +2303,11 @@ window.__ModuleLoader__.load({
 			const api = {
 				openSession: (sessionId) => ctx.uiWorkspace.openSession(sessionId),
 				startBlank: (workspaceId) => call(ctx.uiWorkspace, "openWorkspace", [workspaceId]),
-				archive: (sessionId) => call(ctx.uiWorkspace, "archiveSession", [sessionId]),
+				archive: (sessionId) => {
+					const done = call(ctx.uiWorkspace, "archiveSession", [sessionId]);
+					if (done !== undefined && typeof done.then === "function") done.then(keepBoard, keepBoard);
+					else keepBoard();
+				},
 				pin: (sessionId) => call(ctx.uiWorkspace, "pinSession", [sessionId]),
 				unpin: (sessionId) => call(ctx.uiWorkspace, "unpinSession", [sessionId]),
 				reorder: (workspaceId, sessionId, beforeSessionId) =>
