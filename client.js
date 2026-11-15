@@ -828,7 +828,12 @@ window.__ModuleLoader__.load({
 		var(--tb-face-a) 0 50%,
 		var(--tb-face-b) 50% 100%
 	);
-	mask-image: radial-gradient(circle at 50% 50%, transparent 0 13%, #000 31%);
+	/* A square hole, not a round one: two bands that are empty in the middle
+	 * and full at the edges, added together, leave exactly the centre open. */
+	mask-image:
+		linear-gradient(to right, #000 0 12%, transparent 28% 72%, #000 88% 100%),
+		linear-gradient(to bottom, #000 0 12%, transparent 28% 72%, #000 88% 100%);
+	mask-composite: add;
 }
 /* A two-colour square still has to read as a lit panel, or it stops looking
  * like a Workspace square at all. The four-frame trick the flat squares use
