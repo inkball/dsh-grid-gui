@@ -32,7 +32,7 @@
 		display: grid; place-items: center;
 		background: var(--c);
 	}
-	.square.grad { background: linear-gradient(135deg in oklch, var(--a) 0%, var(--b) 100%); }
+	.square.grad { background: linear-gradient(135deg, var(--a) 0 46%, transparent 46% 54%, var(--b) 54% 100%); }
 	.square svg { width: 46%; height: 46%; color: #fff; opacity: 0.62; }
 	.name { margin-top: 10px; font-size: 13px; font-weight: 600; }
 	.hex { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -47,7 +47,7 @@
 <body>
 
 <h1>状态配色</h1>
-<p class="lede">一层方块的七种状态组合。单个状态用纯色，两种状态用渐变（一个角一种颜色），三种状态用纯紫。</p>
+<p class="lede">一层方块的七种状态组合。单个状态用纯色，两种状态沿对角线切成两半（一个角一种纯色，中间空一条），三种状态用纯紫。</p>
 
 <h2>单个状态 · 纯色</h2>
 <div class="row">
@@ -68,22 +68,22 @@
 	</div>
 </div>
 
-<h2>两种状态 · 渐变</h2>
+<h2>两种状态 · 对角两半</h2>
 <div class="row">
 	<div class="cell">
 		<div class="square grad" style="--a: var(--run); --b: var(--wait)"></div>
 		<div class="name">运行 + 等待</div>
-		<div class="hex">左上蓝 → 右下琥珀</div>
+		<div class="hex">左上蓝 / 空 / 右下琥珀</div>
 	</div>
 	<div class="cell">
 		<div class="square grad" style="--a: var(--run); --b: var(--done)"></div>
 		<div class="name">完成 + 运行</div>
-		<div class="hex">左上蓝 → 右下绿</div>
+		<div class="hex">左上蓝 / 空 / 右下绿</div>
 	</div>
 	<div class="cell">
 		<div class="square grad" style="--a: var(--wait); --b: var(--done)"></div>
 		<div class="name">完成 + 等待</div>
-		<div class="hex">左上琥珀 → 右下绿</div>
+		<div class="hex">左上琥珀 / 空 / 右下绿</div>
 	</div>
 </div>
 
@@ -105,10 +105,10 @@
 </table>
 
 <p class="note">
-	<b>为什么两种状态不用混合。</b>混合会把两种颜色平均成第三种，蓝和琥珀平均出来是灰——两种颜色都不是，在灰底上就是一块暗斑。渐变让方块同时容纳两种颜色：左上角纯的一种，右下角纯的另一种，中间过渡。<br><br>
-	<b>为什么渐变在 oklch 里插值。</b>直接走 sRGB 的话，蓝到琥珀的中点会经过一段死灰褐色；oklch 沿色相弧走，全程保持饱和。实测中点：sRGB 是灰，oklch 是品红。<br><br>
-	<b>为什么三种状态不用渐变。</b>一个方块里挤三种颜色就不再是一眼能读的信息，而这块板子的全部意义就是一眼读完。紫色是唯一没被单色和两两组合占用的色相。<br><br>
-	<b>渐变格没有「灯板」边框。</b>单色格有一圈把边缘压暗的描边，让方块读成从中心发光的灯板。渐变格去掉了它——那圈压暗正好落在两个纯色角上，会把颜色弄脏。
+	<b>为什么两种状态不用混合。</b>混合会把两种颜色平均成第三种，蓝和琥珀平均出来是灰——两种颜色都不是，在灰底上就是一块暗斑。<br><br>
+	<b>怎么做的。</b>方块沿对角线切成两半：左上角一种纯色，右下角一种纯色，中间留一条空带，什么都不画，露出底色。所以方块里永远只有两种颜色，绝不会出现第三种被混合出来的颜色。实测沿对角线采样：<code>#4176e6</code> → 空 → <code>#f59e0b</code>，中间没有过渡色。<br><br>
+	<b>为什么三种状态不用两半。</b>一个方块里挤三种颜色就不再是一眼能读的信息，而这块板子的全部意义就是一眼读完。紫色是唯一没被单色和两两组合占用的色相。<br><br>
+	<b>两半格没有「灯板」边框。</b>单色格有一圈把边缘压暗的描边，让方块读成从中心发光的灯板。两半格去掉了它——那圈压暗正好落在两个纯色角上，会把颜色弄脏。
 </p>
 
 </body>

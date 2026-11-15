@@ -613,9 +613,10 @@ window.__ModuleLoader__.load({
 			if (live) parts.push("run");
 			if (waiting) parts.push("wait");
 			if (parts.length === 0) return "";
-			/* Two statuses side by side are drawn as a gradient, one status per
-			 * corner, so the square carries both colours instead of a blend
-			 * that would average them into something neither of them is. */
+			/* Two statuses side by side are drawn as two halves, one status
+			 * per corner, so the square carries both colours instead of a
+			 * blend that would average them into something neither of them
+			 * is. */
 			const pair = parts.length === 2 ? " is-c-pair" : "";
 			return " is-c-" + parts.join("-") + pair + (live ? " is-c-live" : "") + " is-colored";
 		}
@@ -765,10 +766,10 @@ window.__ModuleLoader__.load({
  * many idle Sessions it holds. Seven combinations, all read off three pure
  * colours: three singles, three pairs, and one square where all three occur.
  *
- * A single status is one flat colour. A pair is a gradient that carries both
- * colours, one at each corner. All three at once stays one flat colour: a
- * square holding three colours stops being readable at a glance, and the
- * whole point of the board is reading it at a glance. */
+ * A single status is one flat colour. A pair is split into two halves, one
+ * colour at each corner, with an empty band between them. All three at once
+ * stays one flat colour: a square holding three colours stops being readable
+ * at a glance, and the whole point of the board is reading it at a glance. */
 .tb-cell.is-c-run {
 	--tb-face: var(--tb-run);
 }
@@ -781,12 +782,11 @@ window.__ModuleLoader__.load({
 /* Two statuses at once are not blended into one colour: a blend would average
  * them into a third colour that is neither, and blue + amber averages to grey.
  * The square carries both instead — one pure colour at the top-left corner,
- * the other at the bottom-right, with a gradient between. The order is fixed
- * (run, then wait, then done) so the same pair always reads the same way.
- *
- * The gradient interpolates in oklch for the same reason the blends used to:
- * a straight sRGB ramp from blue to amber passes through a dead grey-brown
- * halfway, while the oklch arc stays saturated the whole way. */
+ * the other at the bottom-right — and nothing at all between them. The band
+ * between the two halves stays empty, so the square only ever shows the two
+ * colours that are actually present, never a third one invented by mixing.
+ * The order is fixed (run, then wait, then done) so the same pair always
+ * reads the same way. */
 .tb-cell.is-c-done-run {
 	--tb-face-a: var(--tb-run);
 	--tb-face-b: var(--tb-done);
@@ -801,11 +801,20 @@ window.__ModuleLoader__.load({
 }
 /* The corners have to stay pure, so a two-colour square drops the lit-panel
  * frame the single-colour squares wear: that frame darkens the edges, which
- * is exactly where the two pure colours sit. */
+ * is exactly where the two pure colours sit.
+ *
+ * The two halves meet a hard stop on either side of an empty band. No colour
+ * is interpolated across it — the band is transparent, so the board shows
+ * through and the square reads as two colours with a gap, not as a blend. */
 .tb-cell[data-wskey].is-c-pair {
 	--tb-face: var(--tb-face-a);
 	background-color: transparent;
-	background-image: linear-gradient(135deg in oklch, var(--tb-face-a) 0%, var(--tb-face-b) 100%);
+	background-image: linear-gradient(
+		135deg,
+		var(--tb-face-a) 0 46%,
+		transparent 46% 54%,
+		var(--tb-face-b) 54% 100%
+	);
 }
 /* All three at once has no free arc left: every point between the three
  * primaries already belongs to a pair, so a blend of all three always lands
