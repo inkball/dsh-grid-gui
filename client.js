@@ -462,11 +462,21 @@ window.__ModuleLoader__.load({
 		 * @param {string} sessionId - Session to classify.
 		 * @returns {string} `wait`, `done`, `run`, or `idle`.
 		 */
-		function statusOf(statuses, sessionId) {
+		function statusOf(statuses, list, sessionId) {
 			const status = statuses === undefined ? undefined : statuses.get(sessionId);
 			if (status === undefined) return "idle";
 			if (status.pendingInteraction !== undefined) return "wait";
-			if (status.completionUnread === true) return "done";
+			if (status.completionUnread === true) {
+				/* A finished Session is not necessarily a successful one: a
+				 * timed-out request, a refused quota or a failed tool call all
+				 * end the turn and all mark it unread. The Host projection
+				 * records why the last turn ended, so a finish that ended in an
+				 * error reads as `fail` and never as the green of a clean one. */
+				const outcome = list === undefined || list === null
+					? undefined
+					: (list.byId?.[sessionId]?.projectionValues?.gridGuiOutcome);
+				return outcome !== undefined && outcome !== null && outcome.kind === "error" ? "fail" : "done";
+			}
 			if (status.running === true) return "run";
 			return "idle";
 		}
@@ -587,11 +597,11 @@ window.__ModuleLoader__.load({
 		const ROD_BAR = 120;
 
 		/** Status bands, in the order they are considered for a rod. */
-		const STATUS_ORDER = ["run", "wait", "done", "idle"];
+		const STATUS_ORDER = ["run", "wait", "fail", "done", "idle"];
 
-		function statusMix(statuses, sessionIds) {
-			const mix = { run: 0, wait: 0, done: 0, idle: 0 };
-			for (const id of sessionIds) mix[statusOf(statuses, id)] += 1;
+		function statusMix(statuses, list, sessionIds) {
+			const mix = { run: 0, wait: 0, done: 0, fail: 0, idle: 0 };
+			for (const id of sessionIds) mix[statusOf(statuses, list, id)] += 1;
 			return mix;
 		}
 
@@ -608,8 +618,10 @@ window.__ModuleLoader__.load({
 			const live = mix.run > 0;
 			const waiting = mix.wait > 0;
 			const done = mix.done > 0;
+			const failed = mix.fail > 0;
 			const parts = [];
 			if (done) parts.push("done");
+			if (failed) parts.push("fail");
 			if (live) parts.push("run");
 			if (waiting) parts.push("wait");
 			if (parts.length === 0) return "";
@@ -721,6 +733,7 @@ window.__ModuleLoader__.load({
 	--tb-run: var(--dsw-alias-state-business-primary, #4176e6);
 	--tb-wait: var(--dsw-alias-state-warn-primary, #f59e0b);
 	--tb-done: var(--dsw-alias-state-success-primary, #22c55e);
+	--tb-fail: var(--dsw-alias-state-error-primary, #e5484d);
 	box-sizing: border-box;
 	width: var(--tb-cell, 32px);
 	height: var(--tb-cell, 32px);
@@ -779,6 +792,9 @@ window.__ModuleLoader__.load({
 .tb-cell.is-c-done {
 	--tb-face: var(--tb-done);
 }
+.tb-cell.is-c-fail {
+	--tb-face: var(--tb-fail);
+}
 /* Two statuses at once are not blended into one colour: a blend would average
  * them into a third colour that is neither, and blue + amber averages to grey.
  * The square carries both instead — one pure colour at the top-left corner,
@@ -798,6 +814,18 @@ window.__ModuleLoader__.load({
 .tb-cell.is-c-done-wait {
 	--tb-face-a: var(--tb-wait);
 	--tb-face-b: var(--tb-done);
+}
+.tb-cell.is-c-done-fail {
+	--tb-face-a: var(--tb-done);
+	--tb-face-b: var(--tb-fail);
+}
+.tb-cell.is-c-fail-run {
+	--tb-face-a: var(--tb-run);
+	--tb-face-b: var(--tb-fail);
+}
+.tb-cell.is-c-fail-wait {
+	--tb-face-a: var(--tb-wait);
+	--tb-face-b: var(--tb-fail);
 }
 /* The corners have to stay pure, so a two-colour square drops the lit-panel
  * frame the single-colour squares wear: that frame darkens the edges, which
@@ -851,7 +879,11 @@ window.__ModuleLoader__.load({
  * primaries already belongs to a pair, so a blend of all three always lands
  * on top of one of them. This state therefore takes the one hue none of the
  * singles or pairs uses — violet — as a fixed value rather than a blend. */
-.tb-cell.is-c-done-run-wait {
+.tb-cell.is-c-done-fail-run,
+.tb-cell.is-c-done-fail-wait,
+.tb-cell.is-c-done-run-wait,
+.tb-cell.is-c-fail-run-wait,
+.tb-cell.is-c-done-fail-run-wait {
 	--tb-face: #a369de;
 }
 .tb-cell.is-colored:hover {
@@ -881,6 +913,9 @@ window.__ModuleLoader__.load({
 }
 .tb-cell.is-done {
 	background: var(--dsw-alias-state-success-primary);
+}
+.tb-cell.is-fail {
+	background: var(--tb-fail);
 }
 .tb-cell.is-current {
 	outline: 2px solid var(--dsw-alias-brand-primary);
@@ -1309,6 +1344,9 @@ window.__ModuleLoader__.load({
 }
 .tb-seg.is-done {
 	background: var(--dsw-alias-state-success-primary);
+}
+.tb-seg.is-fail {
+	background: var(--dsw-alias-state-error-primary, #e5484d);
 }
 .tb-seg.is-idle {
 	background: var(--dsw-alias-border-l4);
@@ -1881,7 +1919,7 @@ window.__ModuleLoader__.load({
 						needle === "" ||
 						block.title.toLowerCase().includes(needle) ||
 						block.sessionIds.some((id) => sessionTitle(list, id).toLowerCase().includes(needle));
-					let className = "tb-cell" + statusCombo(statusMix(statuses, block.sessionIds));
+					let className = "tb-cell" + statusCombo(statusMix(statuses, list, block.sessionIds));
 					if (blockIsCurrent(list, block.sessionIds)) className += " is-current";
 					if (!hit) className += " is-dim";
 					workspaceCells.push(
@@ -1917,7 +1955,7 @@ window.__ModuleLoader__.load({
 			const sessionCells = [];
 			if (entered !== null && room !== null) {
 				for (const sessionId of room.sessionIds) {
-					const state = statusOf(statuses, sessionId);
+					const state = statusOf(statuses, list, sessionId);
 					const title = sessionTitle(list, sessionId);
 					const hit = needle === "" || title.toLowerCase().includes(needle);
 					let className = "tb-cell";
@@ -2172,7 +2210,7 @@ window.__ModuleLoader__.load({
 			 * among their statuses, so the bands always sum to 100%. */
 			const rods = blocks.map((block) => {
 				const count = block.sessionIds.length;
-				const mix = statusMix(statuses, block.sessionIds);
+				const mix = statusMix(statuses, list, block.sessionIds);
 				const classes = ["tb-rod"];
 				if (blockIsCurrent(list, block.sessionIds)) classes.push("is-current");
 				if (block.key === entered) classes.push("is-entered");

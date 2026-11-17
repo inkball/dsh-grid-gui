@@ -37,6 +37,50 @@ const MAX_BODY_BYTES = 256 * 1024;
 const MAX_VALUE_LENGTH = 128 * 1024;
 /** Accepted icon kinds. */
 const ICON_KINDS = ["emoji", "image"];
+/** Projection key carrying why a Session's last turn ended. */
+const OUTCOME_KEY = "gridGuiOutcome";
+
+/**
+ * Shape of the outcome projection. Hand-written rather than zod: this plugin
+ * has no dependencies, and the registry only ever calls `parse`.
+ */
+const outcomeSchema = {
+	parse(value) {
+		const source = value !== null && typeof value === "object" ? value : {};
+		return {
+			kind: typeof source.kind === "string" ? source.kind : null,
+			at: typeof source.at === "number" ? source.at : null,
+			code: typeof source.code === "string" ? source.code : null,
+		};
+	},
+};
+
+/**
+ * Why the last turn ended, as the Session log recorded it.
+ *
+ * `turn/end` carries `reason.kind`: `completed` for a clean finish, `error`
+ * for a failed one, plus `aborted` and `interrupted`. The shipped status
+ * store folds all of them into one "finished, unread" flag, so a request that
+ * timed out reads exactly like a successful answer. This projection keeps the
+ * distinction so the board can colour the two differently.
+ *
+ * @param {object} state - outcome before the event.
+ * @param {object} event - next committed Session event.
+ * @returns {object} the outcome after the event.
+ */
+function applyOutcome(state, event) {
+	if (event.type === "turn/start") {
+		/* Keep the same reference when nothing changes, so the registry does
+		 * not report a change for every new turn. */
+		return state.kind === null && state.at === null && state.code === null ? state : { kind: null, at: null, code: null };
+	}
+	if (event.type !== "turn/end") return state;
+	const reason = event.data !== null && typeof event.data === "object" ? event.data.reason : undefined;
+	const kind = reason !== null && typeof reason === "object" && typeof reason.kind === "string" ? reason.kind : null;
+	const failure = reason !== null && typeof reason === "object" ? reason.error : undefined;
+	const code = failure !== null && typeof failure === "object" && typeof failure.code === "string" ? failure.code : null;
+	return { kind, at: typeof event.time === "number" ? event.time : null, code };
+}
 
 /**
  * Validator for one stored icon record.
@@ -138,6 +182,45 @@ function readBody(req) {
 function apply(ctx) {
 	let domain = null;
 	let opening = null;
+
+	/* Register the outcome projection when the composition mounts one. It is
+	 * looked up rather than injected so the plugin still loads in a profile
+	 * without sessions, where icons alone are still useful. */
+	ctx.effect(() => {
+		const projections = ctx.get("sessionProjections");
+		if (projections === undefined || projections === null) return undefined;
+		let dispose;
+		let released = false;
+		const ready = Promise.resolve(
+			projections.register({
+				key: OUTCOME_KEY,
+				stateSchema: outcomeSchema,
+				init: () => ({ kind: null, at: null, code: null }),
+				apply: applyOutcome,
+				wire: { viewSchema: outcomeSchema, view: (state) => state },
+				stateVersion: 1,
+			}),
+		).then(
+			(handle) => {
+				/* The registry hands back a ProjectionHandle; releasing one
+				 * reference is `dispose()`, not calling it. */
+				if (released) {
+					if (handle !== null && typeof handle === "object" && typeof handle.dispose === "function") handle.dispose();
+					return;
+				}
+				dispose = handle;
+			},
+			(error) => {
+				ctx.logger?.warn?.("grid-gui: turn outcome projection unavailable: %s", error?.message ?? error);
+			},
+		);
+		return () => {
+			released = true;
+			ready.then(() => {
+				if (dispose !== undefined && dispose !== null && typeof dispose.dispose === "function") dispose.dispose();
+			});
+		};
+	}, "gridGui: turn outcome projection");
 
 	/**
 	 * Open the icons table once, on first use, and share the handle.

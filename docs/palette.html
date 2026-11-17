@@ -9,6 +9,7 @@
 		--wait: #f59e0b;
 		--done: #22c55e;
 		--all: #a369de;
+		--fail: #e5484d;
 		--ink: #1b1b1b;
 		--muted: #6b6b6b;
 		--line: #e2e2e2;
@@ -71,6 +72,11 @@
 		<div class="name">仅完成</div>
 		<div class="hex">#22c55e</div>
 	</div>
+	<div class="cell">
+		<div class="square" style="--c: var(--fail)"></div>
+		<div class="name">仅失败</div>
+		<div class="hex">#e5484d</div>
+	</div>
 </div>
 
 <h2>两种状态 · 对角两半</h2>
@@ -90,13 +96,28 @@
 		<div class="name">完成 + 等待</div>
 		<div class="hex">左上琥珀 / 右下绿</div>
 	</div>
+	<div class="cell">
+		<div class="square grad" style="--a: var(--done); --b: var(--fail)"></div>
+		<div class="name">完成 + 失败</div>
+		<div class="hex">左上绿 / 右下红</div>
+	</div>
+	<div class="cell">
+		<div class="square grad" style="--a: var(--run); --b: var(--fail)"></div>
+		<div class="name">运行 + 失败</div>
+		<div class="hex">左上蓝 / 右下红</div>
+	</div>
+	<div class="cell">
+		<div class="square grad" style="--a: var(--wait); --b: var(--fail)"></div>
+		<div class="name">等待 + 失败</div>
+		<div class="hex">左上琥珀 / 右下红</div>
+	</div>
 </div>
 
-<h2>三种状态 · 纯色</h2>
+<h2>三种及以上 · 纯色</h2>
 <div class="row">
 	<div class="cell">
 		<div class="square" style="--c: var(--all)"></div>
-		<div class="name">三种都有</div>
+		<div class="name">三种及以上</div>
 		<div class="hex">#a369de</div>
 	</div>
 </div>
